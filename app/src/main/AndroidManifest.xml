@@ -1,23 +1,34 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="ru.berserkclub.evotorereceipt">
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="ru.evotor.permission.receipt.print.INTERNET_RECEIPT" />
+    <uses-permission android:name="ru.evotor.pushnotifications.PUSH_RECEIVE" />
 
     <application
         android:allowBackup="true"
-        android:icon="@android:drawable/ic_menu_send"
+        android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <meta-data
+            android:name="app_uuid"
+            android:value="70e0031d-1ada-479a-a1eb-d0c2673ca206" />
+
         <activity
-            android:name=".MainActivity"
-            android:exported="true">
+            android:name=".ReceiptDispatchActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoDisplay" />
+
+        <receiver
+            android:name=".PushReceiver"
+            android:exported="true"
+            android:permission="ru.evotor.pushnotifications.PUSH_SENDER">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="ru.evotor.pushnotifications.PUSH_RECEIVED_EVENT" />
             </intent-filter>
-        </activity>
+        </receiver>
+
     </application>
 
 </manifest>

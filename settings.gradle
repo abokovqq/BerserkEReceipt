@@ -1,2 +1,22 @@
-rootProject.name = 'EvotorEReceiptApp'
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+        gradlePluginPortal()
+        mavenLocal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+        mavenLocal()
+    }
+}
+
+rootProject.name = "BerserkEReceipt"
 include ':app'

@@ -1,15 +1,17 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+}
 
 android {
     namespace 'ru.berserkclub.evotorereceipt'
-    compileSdkVersion 33
+    compileSdk 36
 
     defaultConfig {
         applicationId "ru.berserkclub.evotorereceipt"
-        minSdkVersion 21
-        targetSdkVersion 33
-        versionCode 1
-        versionName "1.0.0"
+        minSdk 23
+        targetSdk 36
+        versionCode 3
+        versionName "0.3.0"
     }
 
     buildTypes {
@@ -20,12 +22,16 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
-    implementation 'com.android.support:appcompat-v7:28.0.0'
+
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+
+    implementation 'com.github.evotor:integration-library:0.6.31'
 }
