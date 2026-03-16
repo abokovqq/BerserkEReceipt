@@ -2,23 +2,65 @@ plugins {
     id 'com.android.application'
 }
 
+def berserkLocalProps = new Properties()
+def berserkLocalPropsFile = rootProject.file("local.properties")
+
+if (berserkLocalPropsFile.exists()) {
+    berserkLocalPropsFile.withInputStream { stream ->
+        berserkLocalProps.load(stream)
+    }
+}
+
+def readBerserkLocalProp = { String key, String defaultValue ->
+    berserkLocalProps.getProperty(key, defaultValue)
+}
+
+def escapeBuildConfigString = { String value ->
+    (value ?: "")
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+}
+
+def debugProbeEnabled =
+        readBerserkLocalProp("BERSERK_DEBUG_PROBE_ENABLED", "false")
+
+def debugPingUrl =
+        escapeBuildConfigString(readBerserkLocalProp("BERSERK_DEBUG_PING_URL", ""))
+
+def debugPingToken =
+        escapeBuildConfigString(readBerserkLocalProp("BERSERK_DEBUG_PING_TOKEN", ""))
+
 android {
     namespace 'ru.berserkclub.evotorereceipt'
     compileSdk 36
+
+    buildFeatures {
+        buildConfig true
+    }
 
     defaultConfig {
         applicationId "ru.berserkclub.evotorereceipt"
         minSdk 23
         //noinspection ExpiredTargetSdkVersion
         targetSdk 24
-        versionCode 5
-        versionName "0.3.1"
+        versionCode 7
+        versionName "0.4.1"
     }
 
     buildTypes {
+        debug {
+            buildConfigField "boolean", "DEBUG_PROBE_ENABLED", debugProbeEnabled
+            buildConfigField "String", "DEBUG_PING_URL", "\"${debugPingUrl}\""
+            buildConfigField "String", "DEBUG_PING_TOKEN", "\"${debugPingToken}\""
+        }
+
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            buildConfigField "boolean", "DEBUG_PROBE_ENABLED", debugProbeEnabled
+            buildConfigField "String", "DEBUG_PING_URL", "\"${debugPingUrl}\""
+            buildConfigField "String", "DEBUG_PING_TOKEN", "\"${debugPingToken}\""
         }
     }
 
@@ -26,6 +68,10 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-Xlint:deprecation']
 }
 
 dependencies {

@@ -45,8 +45,10 @@ public class ReceiptDispatchActivity extends IntegrationAppCompatActivity {
 
     private static final String TAG = "ru.berserkclub.evotorereceipt";
     private static final int MAX_ITEM_NAME_LENGTH = 128;
+
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
+
     private static final Pattern PHONE_PATTERN =
             Pattern.compile("^\\d{10,15}$");
 
@@ -54,23 +56,65 @@ public class ReceiptDispatchActivity extends IntegrationAppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        String debugReceiptId = resolveReceiptIdForDebug(getIntent());
+
+        DebugProbe.event(
+                this,
+                "dispatch_started",
+                "ReceiptDispatchActivity.onCreate invoked",
+                getIntent(),
+                debugReceiptId,
+                null
+        );
+
         try {
             handleIntent(getIntent());
-        } catch (Exception e) {
+        } catch (Throwable e) {
             Log.e(TAG, "Failed to handle receipt intent", e);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_error",
+                    "Failed to handle receipt intent",
+                    getIntent(),
+                    debugReceiptId,
+                    e
+            );
+
             finish();
         }
     }
 
-    private void handleIntent(Intent intent) {
+    private void handleIntent(@Nullable Intent intent) {
         if (intent == null) {
             Log.e(TAG, "Intent is null");
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_invalid_intent",
+                    "Intent is null",
+                    null,
+                    ReceiptIdStore.get(this),
+                    null
+            );
+
             finish();
             return;
         }
 
-        if (!ACTION_SEND_RECEIPT.equals(intent.getAction())) {
-            Log.e(TAG, "Unsupported action: " + intent.getAction());
+        String action = intent.getAction();
+        if (!ACTION_SEND_RECEIPT.equals(action)) {
+            Log.e(TAG, "Unsupported action: " + action);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_invalid_action",
+                    "Unsupported action: " + action,
+                    intent,
+                    resolveReceiptIdForDebug(intent),
+                    null
+            );
+
             finish();
             return;
         }
@@ -84,42 +128,112 @@ public class ReceiptDispatchActivity extends IntegrationAppCompatActivity {
         String rawPhone = normalizePhone(intent.getStringExtra(EXTRA_PHONE));
         String paymentPlace = trimToNull(intent.getStringExtra(EXTRA_PAYMENT_PLACE));
 
-        // Приоритет: телефон. Если телефон есть, email игнорируем.
+        DebugProbe.event(
+                this,
+                "dispatch_intent_received",
+                "Required extras extracted from intent",
+                intent,
+                receiptId,
+                null
+        );
+
         String phone = rawPhone;
         String email = (phone == null) ? rawEmail : null;
 
         if (!isValidReceiptId(receiptId)) {
             Log.e(TAG, "Invalid receiptId: " + receiptId);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_validation_error",
+                    "Invalid receiptId",
+                    intent,
+                    receiptId,
+                    null
+            );
+
             finish();
             return;
         }
 
+        ReceiptIdStore.save(this, receiptId);
+
         if (!isValidItemName(itemName)) {
             Log.e(TAG, "Invalid itemName for receiptId=" + receiptId);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_validation_error",
+                    "Invalid itemName",
+                    intent,
+                    receiptId,
+                    null
+            );
+
             finish();
             return;
         }
 
         if (phone == null && email == null) {
             Log.i(TAG, "Receipt skipped: no phone/email, receiptId=" + receiptId);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_skipped",
+                    "No phone/email, receipt skipped",
+                    intent,
+                    receiptId,
+                    null
+            );
+
             finish();
             return;
         }
 
         if (email != null && !isValidEmail(email)) {
             Log.e(TAG, "Invalid email for receiptId=" + receiptId + ": " + email);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_validation_error",
+                    "Invalid email",
+                    intent,
+                    receiptId,
+                    null
+            );
+
             finish();
             return;
         }
 
         if (phone != null && !isValidPhone(phone)) {
             Log.e(TAG, "Invalid phone for receiptId=" + receiptId + ": " + phone);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_validation_error",
+                    "Invalid phone",
+                    intent,
+                    receiptId,
+                    null
+            );
+
             finish();
             return;
         }
 
         if (paymentPlace == null) {
             Log.e(TAG, "paymentPlace is required, receiptId=" + receiptId);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_validation_error",
+                    "paymentPlace is required",
+                    intent,
+                    receiptId,
+                    null
+            );
+
             finish();
             return;
         }
@@ -132,18 +246,48 @@ public class ReceiptDispatchActivity extends IntegrationAppCompatActivity {
             quantity = new BigDecimal(quantityStr.trim());
         } catch (Throwable e) {
             Log.e(TAG, "Invalid numeric values for receiptId=" + receiptId, e);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_validation_error",
+                    "Invalid numeric values",
+                    intent,
+                    receiptId,
+                    e
+            );
+
             finish();
             return;
         }
 
         if (!isValidMoney(price)) {
             Log.e(TAG, "Invalid price for receiptId=" + receiptId + ": " + price);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_validation_error",
+                    "Invalid price",
+                    intent,
+                    receiptId,
+                    null
+            );
+
             finish();
             return;
         }
 
         if (!isValidQuantity(quantity)) {
             Log.e(TAG, "Invalid quantity for receiptId=" + receiptId + ": " + quantity);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_validation_error",
+                    "Invalid quantity",
+                    intent,
+                    receiptId,
+                    null
+            );
+
             finish();
             return;
         }
@@ -210,6 +354,15 @@ public class ReceiptDispatchActivity extends IntegrationAppCompatActivity {
         User currentUser = UserApi.getAuthenticatedUser(this);
         String userUuid = currentUser != null ? currentUser.getUuid() : null;
 
+        DebugProbe.event(
+                this,
+                "dispatch_processing",
+                "Main dispatch logic started",
+                intent,
+                receiptId,
+                null
+        );
+
         processReceipt(
                 receiptId,
                 listDocs,
@@ -222,7 +375,7 @@ public class ReceiptDispatchActivity extends IntegrationAppCompatActivity {
     }
 
     private void processReceipt(
-            String receiptId,
+            final String receiptId,
             ArrayList<Receipt.PrintReceipt> listDocs,
             String phone,
             String email,
@@ -231,6 +384,15 @@ public class ReceiptDispatchActivity extends IntegrationAppCompatActivity {
             String userUuid
     ) {
         try {
+            DebugProbe.event(
+                    this,
+                    "dispatch_command_start",
+                    "PrintSellReceiptCommand.process started",
+                    getIntent(),
+                    receiptId,
+                    null
+            );
+
             new PrintSellReceiptCommand(
                     listDocs,
                     null,
@@ -250,6 +412,16 @@ public class ReceiptDispatchActivity extends IntegrationAppCompatActivity {
 
         } catch (Throwable e) {
             Log.e(TAG, "PrintSellReceiptCommand failed to start, receiptId=" + receiptId, e);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_error",
+                    "PrintSellReceiptCommand failed to start",
+                    getIntent(),
+                    receiptId,
+                    e
+            );
+
             finish();
         }
     }
@@ -262,19 +434,75 @@ public class ReceiptDispatchActivity extends IntegrationAppCompatActivity {
                 case OK:
                     PrintReceiptCommandResult commandResult =
                             PrintReceiptCommandResult.create(result.getData());
+
                     Log.i(TAG, "Receipt sent successfully, receiptId=" + receiptId + ", result=" + commandResult);
+
+                    DebugProbe.event(
+                            this,
+                            "dispatch_success",
+                            "Receipt processed successfully",
+                            getIntent(),
+                            receiptId,
+                            null
+                    );
+
+                    ReceiptIdStore.markProcessed(this, receiptId);
+                    ReceiptIdStore.clear(this);
                     break;
 
                 case ERROR:
                     String message = result.getError() != null
                             ? result.getError().getMessage()
                             : "Unknown error";
+
                     Log.e(TAG, "Receipt error, receiptId=" + receiptId + ", message=" + message);
+
+                    DebugProbe.event(
+                            this,
+                            "dispatch_error",
+                            "Receipt error: " + message,
+                            getIntent(),
+                            receiptId,
+                            null
+                    );
+                    break;
+
+                default:
+                    Log.e(TAG, "Unexpected result type, receiptId=" + receiptId + ", type=" + result.getType());
+
+                    DebugProbe.event(
+                            this,
+                            "dispatch_error",
+                            "Unexpected result type: " + result.getType(),
+                            getIntent(),
+                            receiptId,
+                            null
+                    );
                     break;
             }
 
         } catch (IntegrationException e) {
             Log.e(TAG, "IntegrationException, receiptId=" + receiptId, e);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_error",
+                    "IntegrationException while processing receipt",
+                    getIntent(),
+                    receiptId,
+                    e
+            );
+        } catch (Throwable e) {
+            Log.e(TAG, "Unexpected error in handleResult, receiptId=" + receiptId, e);
+
+            DebugProbe.event(
+                    this,
+                    "dispatch_error",
+                    "Unexpected error in handleResult",
+                    getIntent(),
+                    receiptId,
+                    e
+            );
         } finally {
             finish();
         }
@@ -318,7 +546,8 @@ public class ReceiptDispatchActivity extends IntegrationAppCompatActivity {
                 && value.scale() <= 3;
     }
 
-    private String normalizePhone(String value) {
+    @Nullable
+    private String normalizePhone(@Nullable String value) {
         String trimmed = trimToNull(value);
         if (trimmed == null) {
             return null;
@@ -326,11 +555,29 @@ public class ReceiptDispatchActivity extends IntegrationAppCompatActivity {
         return trimmed.replaceAll("[^0-9]", "");
     }
 
-    private String trimToNull(String value) {
+    @Nullable
+    private String trimToNull(@Nullable String value) {
         if (value == null) {
             return null;
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    @Nullable
+    private String resolveReceiptIdForDebug(@Nullable Intent intent) {
+        if (intent != null) {
+            String direct = trimToNull(intent.getStringExtra(EXTRA_RECEIPT_ID));
+            if (direct != null) {
+                return direct;
+            }
+
+            String parsed = DebugProbe.findReceiptId(intent);
+            if (parsed != null && !parsed.trim().isEmpty()) {
+                return parsed.trim();
+            }
+        }
+
+        return ReceiptIdStore.get(this);
     }
 }
